@@ -26,8 +26,8 @@ async fn init_device() -> Result<(Device, Queue), RequestDeviceError> {
         ).await
 }
 
-fn load_collatz_shader_module(device: &Device) -> ShaderModule {
-    let shader_bytes: &[u8] = include_bytes!(env!("collatz.spv"));
+fn load_compute_shader_module(device: &Device) -> ShaderModule {
+    let shader_bytes: &[u8] = include_bytes!(env!("compute.spv"));
     let spirv = std::borrow::Cow::Owned(wgpu::util::make_spirv_raw(shader_bytes).into_owned());
     let shader_binary = wgpu::ShaderModuleDescriptorSpirV {
         label: None,
@@ -38,9 +38,9 @@ fn load_collatz_shader_module(device: &Device) -> ShaderModule {
     unsafe { device.create_shader_module_spirv(&shader_binary) }
 }
 
-async fn run_collatz_shader(input: &[u8]) -> Result<Vec<u32>, BufferAsyncError> {
+async fn run_compute_shader(input: &[u8]) -> Result<Vec<u32>, BufferAsyncError> {
     let (device, queue) = init_device().await.expect("Failed to create device");
-    let module = load_collatz_shader_module(&device);
+    let module = load_compute_shader_module(&device);
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
@@ -130,7 +130,7 @@ async fn run_collatz_shader(input: &[u8]) -> Result<Vec<u32>, BufferAsyncError> 
     })
 }
 
-async fn collatz() {
+async fn compute() {
     let top = 2u32.pow(20);
     let src_range = 1..top;
 
@@ -139,7 +139,7 @@ async fn collatz() {
         .flat_map(u32::to_ne_bytes)
         .collect::<Vec<_>>();
 
-    if let Ok(result) = run_collatz_shader(&src).await {
+    if let Ok(result) = run_compute_shader(&src).await {
         let mut max = 0;
         for (src, out) in src_range.zip(result.iter().copied()) {
             if out == u32::MAX {
@@ -155,5 +155,5 @@ async fn collatz() {
 }
 
 fn main() {
-    futures::executor::block_on(collatz());
+    futures::executor::block_on(compute());
 }
